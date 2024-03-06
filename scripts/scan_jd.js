@@ -9,7 +9,7 @@
 
     // Stable data used for parsing html and text
     const listTypeTagNames = [ "ul", "ol" ];
-    const experienceLanguageTerms = ["experience", "experienced", "years"];
+    const experienceLanguageTerms = ["experience", "experienced"];
     const numberCharacters = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
     // Helper function to test if character from string is a numeric character
