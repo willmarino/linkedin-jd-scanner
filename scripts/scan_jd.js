@@ -1,7 +1,10 @@
 
 // TODO figure out how to run on page load completion - 5 second timer is hacky and slow
 // TODO Stop logging YOE info after it is parsed, start placing it inside of linkedin page for user view
-setTimeout(function(){
+
+
+( async () => {
+    await new Promise(r => setTimeout(r, 1000)) // Bit hacky, but page content is never fully loaded immediately after the DOM's load event fires
     console.log("JD scanner running");
 
     // Stable data used for parsing html and text
@@ -58,11 +61,27 @@ setTimeout(function(){
         }
 
     }
-    
 
-    // Parse HTML
-    const jd = document.getElementById("job-details");
-    const jdSpan = jd.querySelectorAll("span")[0];
+
+    // Try to parse html and pull out job description elements, these load via some js after the html's load event fires
+    // So we have to wait some additional time for it to be in the DOM before pulling it out
+    // Current method of ensuring (within reason) that the info exists is to wait 1 second each time the content is not yet loaded, and then try again (max 3 times)
+    let jd;
+    let jdSpan;
+    let allJDContentLoaded = false;
+    let numTimesWaitedForPageLoad = 0;
+    while( !allJDContentLoaded && (numTimesWaitedForPageLoad < 3) ){
+        jd = document.getElementById("job-details");
+        if(!jd){
+            await new Promise(r => setTimeout(r, 1000))
+        }else{
+            jdSpan = jd.querySelectorAll("span")[0];
+            if(jdSpan){
+                allJDContentLoaded = true;
+            }
+        }
+    }
+    
     if(!jdSpan){
         console.log(`Unable to find JD text, not scanning`);
         return;
@@ -85,7 +104,7 @@ setTimeout(function(){
             manuallyCollectedTextLines.push(child.textContent);
         }
     }
-    
+
     // Parse lines of text, find numbers attached to experience terms
     // Return greatest number which stands alone ("2 years", "2+ years") or starts a range ("2-4 years", "2 - 4 years")
     let yoeNum = null;
@@ -119,7 +138,7 @@ setTimeout(function(){
                     const wordAtIdx = (tlWords[idx]) ? tlWords[idx] : ""; // forces it to be the case that there will always be 'two previous words' for logic to run on
                     prevTwoWords.unshift(wordAtIdx);
                 }
-    
+
                 const rangeStartNum = getNumFromString(prevTwoWords[0]);
 
                 const wordIsEndOfRange = rangeStartNum &&
@@ -144,7 +163,4 @@ setTimeout(function(){
         console.log(`JD Scanner finished running, unable to find YOE info`);
     }
 
-}, 5000)
-
-
-
+})();
