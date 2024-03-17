@@ -1,11 +1,5 @@
-
-// TODO figure out how to run on page load completion - 5 second timer is hacky and slow
-// TODO Stop logging YOE info after it is parsed, start placing it inside of linkedin page for user view
-
-
-( async () => {
-    await new Promise(r => setTimeout(r, 1000)) // Bit hacky, but page content is never fully loaded immediately after the DOM's load event fires
-    console.log("JD scanner running");
+// Pull desired YOE from
+(async () => {
 
     // Stable data used for parsing html and text
     const listTypeTagNames = [ "ul", "ol" ];
@@ -63,6 +57,51 @@
     }
 
 
+    // Helper function for writing to job card sidebar elements
+    function writeYoeDisplay(yoeNum){
+
+        // Get the sidebar card we care about
+        const selectedSidebarCardCollection = document.getElementsByClassName("jobs-search-results-list__list-item--active"); // Actively highlighted element
+        if(selectedSidebarCardCollection.length === 0){
+            console.log("failure");
+            return;
+        }
+        const selectedSidebarCard = selectedSidebarCardCollection[0];
+
+        // Grab footer element from the children of the sidebar card
+        let footerElement;
+        for(let i = 0; i < selectedSidebarCard.children.length; i++){
+            const childElement = selectedSidebarCard.children[i];
+            const childElementClassList = childElement.classList;
+            
+            for(let j = 0;j < childElementClassList.length; j++){
+                const curClassName = childElementClassList[j];
+                if(curClassName.includes("job-card-list__footer-wrapper")){
+                    footerElement = childElement;
+                }
+            }
+        }
+
+        // If we have not already appended the YOE info to the footer, then do so
+        const lastFooterChild = footerElement.children[footerElement.children.length - 1];
+        const infoAlreadyWritten = lastFooterChild.textContent.includes("YOE");
+
+        if(!infoAlreadyWritten){
+            const newFooterChild = document.createElement("li");
+            newFooterChild.textContent = `YOE desired: ${yoeNum || "No information provided"}`;
+    
+            const footerChildClassList = footerElement.children[0].classList;
+            for(let i = 0; i < footerChildClassList.length; i++){
+                const curClassName = footerChildClassList[i];
+                newFooterChild.classList.add(curClassName);
+            }
+            
+            footerElement.appendChild(newFooterChild);
+        }
+
+    }
+
+
     // Try to parse html and pull out job description elements, these load via some js after the html's load event fires
     // So we have to wait some additional time for it to be in the DOM before pulling it out
     // Current method of ensuring (within reason) that the info exists is to wait 1 second each time the content is not yet loaded, and then try again (max 3 times)
@@ -70,10 +109,10 @@
     let jdSpan;
     let allJDContentLoaded = false;
     let numTimesWaitedForPageLoad = 0;
-    while( !allJDContentLoaded && (numTimesWaitedForPageLoad < 3) ){
+    while( !allJDContentLoaded && (numTimesWaitedForPageLoad < 30) ){
         jd = document.getElementById("job-details");
         if(!jd){
-            await new Promise(r => setTimeout(r, 1000))
+            await new Promise(r => setTimeout(r, 100))
         }else{
             jdSpan = jd.querySelectorAll("span")[0];
             if(jdSpan){
@@ -152,15 +191,10 @@
                 }
             }
 
-
-
         }
     }
 
-    if(yoeNum){
-        console.log(`JD Scanner finished running, this listing wants ${yoeNum} YOE`);
-    }else{
-        console.log(`JD Scanner finished running, unable to find YOE info`);
-    }
+    // console.log(`JD Scanner finished running, this listing wants ${yoeNum} YOE`);
+    writeYoeDisplay(yoeNum);
 
 })();
